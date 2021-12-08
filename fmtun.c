@@ -1,12 +1,9 @@
 /* 
- * File:   fmtun.c
- * Author: inaba
+ * FM tuner for PIC12F1572
  *
- * Created on November 15, 2021, 9:20 PM
  *      JA1YTS:Toshiba Amature Radio Station
  *      JK1MLY:Hidekazu Inaba
  *
- * FM tuner for PIC12F1501
  *  (C)2021 JA1YTS,JK1MLY All rights reserved.
  * Redistribution and use in source and binary forms, with or without modification, 
  * are permitted provided that the following conditions are met:
@@ -47,6 +44,7 @@
 #define	I2C_SCK_HIGH	LATA4 = 1
 #define	LED_ON      	LATA0 = 0
 #define	LED_OFF     	LATA0 = 1
+#define	DBG_SW    		RA1 
 
 #define	CHK_TFM_H       0x0A
 #define	CHK_TFM_L       0x18
@@ -95,9 +93,9 @@ void port_init(void) {
     __delay_ms(100);
 }
 
-unsigned uint8_t adconv(void){
-	unsigned uint16_t temp;
-	unsigned uint8_t ret;
+uint8_t adconv(void){
+	uint16_t temp;
+	uint8_t ret;
     temp = 0;
     for (uint8_t i = 0; i < 7; i++){
         ADCON0bits.ADGO = 1;
@@ -162,7 +160,7 @@ void tun_chk(void)
 	data = (uint8_t)(TFM03_L & 0xFF );
     i2c_snd(data);	
 // 
-	data = (uint8_t)(REG04_H & 0xFF );
+	data = (uint8_t)(AFC04_H & 0xFF );
     i2c_snd(data);	
 // 	
 	data = (uint8_t)(REG04_L & 0xFF );
@@ -212,7 +210,7 @@ void tun_adc(uint8_t ret) {
 	data = (uint8_t)(REG04_H & 0xFF );
     i2c_snd(data);	
 // 	
-	data = (uint8_t)(REG04_L & 0x7F );
+	data = (uint8_t)(REG04_L & 0xFF );
     i2c_snd(data);	
 // 
 	data = (uint8_t)(REG05_H & 0xFF );
@@ -234,11 +232,18 @@ void main(void) {
 
 //Initialize
 	port_init();
-//	tun_set();
-	tun_chk();
     LED_ON;
-	__delay_ms(5000);
+	__delay_ms(1000);
     LED_OFF;
+
+    while(DBG_SW == 0){
+    	tun_chk();
+    	__delay_ms(1000);
+        LED_ON;
+    	__delay_ms(1000);
+        LED_OFF;
+    	__delay_ms(8000);
+    }
  
     uint8_t freq;
     uint8_t buf2;
@@ -249,8 +254,7 @@ void main(void) {
     tun_adc(freq);
     
 //Loop    
-    while(1)
-    {
+    while(1){
         uint8_t buf1;
         buf1 = adconv();
         if((freq != buf1) && (buf1 == buf2) && (flag == true)){
